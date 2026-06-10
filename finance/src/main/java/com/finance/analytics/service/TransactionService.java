@@ -21,8 +21,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.finance.analytics.kafka.TransactionEventProducer;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -30,7 +28,6 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
-    private final TransactionEventProducer transactionEventProducer;
 
     @Caching(evict = {
             @CacheEvict(value = "spendingByCategory", allEntries = true),
@@ -55,12 +52,7 @@ public class TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
         accountRepository.save(account);
-        
-        try {
-            transactionEventProducer.publishTransactionCreated(savedTransaction);
-        } catch (Exception e) {
-            log.error("Failed to publish transaction event to Kafka for transaction ID: {}", savedTransaction.getId(), e);
-        }
+
         
         return mapToResponse(savedTransaction);
     }
@@ -122,12 +114,6 @@ public class TransactionService {
         Transaction savedDebit = transactionRepository.save(debitTransaction);
         Transaction savedCredit = transactionRepository.save(creditTransaction);
 
-        try {
-            transactionEventProducer.publishTransactionCreated(savedDebit);
-            transactionEventProducer.publishTransactionCreated(savedCredit);
-        } catch (Exception e) {
-            log.error("Failed to publish transfer events to Kafka", e);
-        }
 
         return List.of(mapToResponse(savedDebit), mapToResponse(savedCredit));
     }
